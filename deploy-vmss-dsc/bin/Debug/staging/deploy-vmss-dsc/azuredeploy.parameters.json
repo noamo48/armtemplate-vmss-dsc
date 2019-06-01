@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus2"
+    },
+    "adminUsername": {
+      "value": "rmdyadmin"
+    },
+    "vmssName": {
+      "value": "web"
+    },
+    "instanceCount": {
+      "value": 2
+    },
+    "virtualNetworkSubnet": {
+      "value": "10.0.1.0/24"
+    },
+    "nicIPAddress": {
+      "value": "10.0.1.4"
+    },
+    "domainName": {
+      "value": "rmdydev.local"
+    },
+    "_artifactsLocation": {
+      "value": "https://deployteststorage1.blob.core.windows.net/deploy-vmss-dsc-stageartifacts/"
+    },
+    "_artifactsLocationSasToken": {
+      "value": "?sv=2018-03-28\u0026ss=bfqt\u0026srt=sco\u0026sp=rwdlacup\u0026se=2019-07-02T03:47:28Z\u0026st=2019-06-01T19:47:28Z\u0026spr=https\u0026sig=Xj0S%2F8J0Bh6pI4x3gBTd7v02lSwBEo1xY4UeutGFPwQ%3D"
+    }
+  }
+}
