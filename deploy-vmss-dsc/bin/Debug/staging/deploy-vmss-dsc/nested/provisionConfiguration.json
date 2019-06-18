@@ -157,7 +157,7 @@
               "name": "[variables('dscConfigurations').WindowsIISServerConfig.name]"
             },
             "parameters": {
-              "ConfigurationData": "{\"AllNodes\":[{\"NodeName\":\"*\",\"PSDscAllowPlainTextPassword\":true}]}"
+              "configurationData": "{\"AllNodes\":[{\"NodeName\":\"*\",\"PSDscAllowPlainTextPassword\":true}]}"
             }
           }
         },
