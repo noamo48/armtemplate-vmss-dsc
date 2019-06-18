@@ -94,6 +94,7 @@ if ((Get-AzureRmResourceGroup -Name $ResourceGroupName -Location $ResourceGroupL
     New-AzureRmResourceGroup -Name $ResourceGroupName -Location $ResourceGroupLocation -Verbose -Force -ErrorAction Stop
 }
 
+
 if ($ValidateOnly) {
     $ErrorMessages = Format-ValidationOutput (Test-AzureRmResourceGroupDeployment -ResourceGroupName $ResourceGroupName `
                                                                                   -TemplateFile $TemplateFile `

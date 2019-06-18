@@ -11,12 +11,18 @@
     "automationAccountName": {
       "type": "string"
     },
+    "certPassword": {
+      "type": "securestring"
+    },
     "location": {
       "type": "string"
     },
     "compileName": {
       "type": "string",
       "defaultValue": "[guid(resourceGroup().id, deployment().name)]"
+    },
+    "jobConfigurationData": {
+      "type": "string"
     }
   },
   "variables": {
@@ -31,6 +37,14 @@
       "xWebAdministration": {
         "name": "xWebAdministration",
         "url": "https://psg-prod-eastus.azureedge.net/packages/xwebadministration.2.6.0.nupkg"
+      },
+      "xPSDesiredStateConfiguration": {
+        "name": "xPSDesiredStateConfiguration",
+        "url": "https://psg-prod-eastus.azureedge.net/packages/xpsdesiredstateconfiguration.8.7.0.nupkg"
+      },
+      "CertificateDsc": {
+        "name": "CertificateDsc",
+        "url": "https://psg-prod-eastus.azureedge.net/packages/certificatedsc.4.6.0.nupkg"
       }
     },
     "runbook": {
@@ -67,13 +81,57 @@
           }
         },
         {
+          "name": "[variables('dscResources').xPSDesiredStateConfiguration.name]",
+          "type": "modules",
+          "apiVersion": "2018-06-30",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[parameters('AutomationAccountName')]"
+          ],
+          "properties": {
+            "contentLink": {
+              "uri": "[variables('dscResources').xPSDesiredStateConfiguration.url]"
+            }
+          }
+        },
+        {
+          "name": "[variables('dscResources').CertificateDsc.name]",
+          "type": "modules",
+          "apiVersion": "2018-06-30",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[parameters('AutomationAccountName')]"
+          ],
+          "properties": {
+            "contentLink": {
+              "uri": "[variables('dscResources').CertificateDsc.url]"
+            }
+          }
+        },
+        {
+          "name": "PfxPassword",
+          "type": "credentials",
+          "apiVersion": "2018-06-30",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[parameters('AutomationAccountName')]"
+          ],
+          "tags": {},
+          "properties": {
+            "userName": "certificate",
+            "password": "[parameters('certPassword')]"
+          }
+        },
+        {
           "name": "[variables('dscConfigurations').WindowsIISServerConfig.name]",
           "type": "configurations",
           "apiVersion": "2018-06-30",
           "location": "[parameters('location')]",
           "dependsOn": [
             "[parameters('AutomationAccountName')]",
-            "[variables('dscResources').xWebAdministration.name]"
+            "[variables('dscResources').xWebAdministration.name]",
+            "[variables('dscResources').xPSDesiredStateConfiguration.name]",
+            "[variables('dscResources').CertificateDsc.name]"
           ],
           "properties": {
             "state": "Published",
@@ -91,13 +149,16 @@
           "tags": {},
           "dependsOn": [
             "[parameters('AutomationAccountName')]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('AutomationAccountName'),'/Credentials/', 'PfxPassword')]",
             "[variables('dscConfigurations').WindowsIISServerConfig.name]"
           ],
           "properties": {
             "configuration": {
               "name": "[variables('dscConfigurations').WindowsIISServerConfig.name]"
             },
-            "parameters": {}
+            "parameters": {
+              "ConfigurationData": "{\"AllNodes\":[{\"NodeName\":\"*\",\"PSDscAllowPlainTextPassword\":true}]}"
+            }
           }
         },
         {
@@ -106,7 +167,7 @@
           "apiversion": "2018-06-30",
           "location": "[parameters('location')]",
           "dependsOn": [
-            "[parameters('AutomationAccountName')]",
+            "[parameters('AutomationAccountName')]"
           ],
           "properties": {
             "runbookType": "PowerShell",

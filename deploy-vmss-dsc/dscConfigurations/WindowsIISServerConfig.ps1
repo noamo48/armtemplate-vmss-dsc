@@ -44,54 +44,88 @@ https://github.com/Microsoft/WindowsIISServerConfig/blob/master/README.md#releas
 configuration WindowsIISServerConfig
 {
 
-Import-DscResource -ModuleName @{ModuleName = 'xWebAdministration';ModuleVersion = '2.6.0.0'}
-Import-DscResource -ModuleName 'PSDesiredStateConfiguration'
+	<# param
+    (
+		[Parameter(Mandatory = $true)]
+        [ValidateNotNullorEmpty()]
+        [PSCredential]
+		$certPass
+    ) #>
 
-    WindowsFeature WebServer
-    {
-        Ensure  = 'Present'
-        Name    = 'Web-Server'
-    }
+	Import-DscResource -ModuleName 'xWebAdministration'
+	Import-DscResource -ModuleName 'xPSDesiredStateConfiguration'
+	Import-DscResource -ModuleName 'CertificateDsc'
+	Import-DscResource -ModuleName 'PSDesiredStateConfiguration'	
 
-	WindowsFeature WebManagement
-    {
-        Ensure  = 'Present'
-        Name    = 'Web-Mgmt-Console'
-		DependsOn = '[WindowsFeature]WebServer'
-    }
+	$certPass = Get-AutomationPSCredential 'PfxPassword'
 
-	WindowsFeature WebASPNet47
+	Node $AllNodes.NodeName
     {
-        Ensure  = 'Present'
-        Name    = 'Web-Asp-Net45'
-		DependsOn = '[WindowsFeature]WebServer'
-    }
+		WindowsFeature WebServer
+		{
+			Ensure  = 'Present'
+			Name    = 'Web-Server'
+		}
 
-	WindowsFeature WebNetExt
-    {
-        Ensure  = 'Present'
-        Name    = 'Web-Net-Ext45'
-		DependsOn = '[WindowsFeature]WebServer'
-    }
+		WindowsFeature WebManagement
+		{
+			Ensure  = 'Present'
+			Name    = 'Web-Mgmt-Console'
+			DependsOn = '[WindowsFeature]WebServer'
+		}
 
-    # IIS Site Default Values
-    xWebSiteDefaults SiteDefaults
-    {
-        ApplyTo                 = 'Machine'
-        LogFormat               = 'IIS'
-        LogDirectory            = 'C:\inetpub\logs\LogFiles'
-        TraceLogDirectory       = 'C:\inetpub\logs\FailedReqLogFiles'
-        DefaultApplicationPool  = 'DefaultAppPool'
-        AllowSubDirConfig       = 'true'
-        DependsOn               = '[WindowsFeature]WebServer'
-    }
+		WindowsFeature WebASPNet47
+		{
+			Ensure  = 'Present'
+			Name    = 'Web-Asp-Net45'
+			DependsOn = '[WindowsFeature]WebServer'
+		}
 
-    # IIS App Pool Default Values
-    xWebAppPoolDefaults PoolDefaults
-    {
-       ApplyTo               = 'Machine'
-       ManagedRuntimeVersion = 'v4.0'
-       IdentityType          = 'ApplicationPoolIdentity'
-       DependsOn             = '[WindowsFeature]WebServer'
-    }
+		WindowsFeature WebNetExt
+		{
+			Ensure  = 'Present'
+			Name    = 'Web-Net-Ext45'
+			DependsOn = '[WindowsFeature]WebServer'
+		}
+
+		# IIS Site Default Settings
+		xWebSiteDefaults SiteDefaults
+		{
+			ApplyTo                 = 'Machine'
+			LogFormat               = 'IIS'
+			LogDirectory            = 'C:\inetpub\logs\LogFiles'
+			TraceLogDirectory       = 'C:\inetpub\logs\FailedReqLogFiles'
+			DefaultApplicationPool  = 'DefaultAppPool'
+			AllowSubDirConfig       = 'true'
+			DependsOn               = '[WindowsFeature]WebServer'
+		}
+
+		# IIS App Pool Default Settings
+		xWebAppPoolDefaults PoolDefaults
+		{
+		   ApplyTo               = 'Machine'
+		   ManagedRuntimeVersion = 'v4.0'
+		   IdentityType          = 'ApplicationPoolIdentity'
+		   DependsOn             = '[WindowsFeature]WebServer'
+		}
+
+		# Get SSL cert file from Azure Storage using SAS URI
+		xRemoteFile CertPfx
+		{
+			Uri = "https://deployteststorage1.blob.core.windows.net/resources/wlidev.pfx?sp=r&st=2019-06-02T22:00:11Z&se=2019-07-03T06:00:11Z&spr=https&sv=2018-03-28&sig=w8b9%2FmpFq15oG%2BJwdnG4ggBNmDNLOXS0KILIoGEPY6w%3D&sr=b"
+			DestinationPath = "C:\temp\wlidev.pfx"
+		}
+	
+		# Import the PFX file which was downloaded to local path
+		PfxImport ImportCertPFX
+		{
+			Ensure     = "Present"
+			DependsOn  = "[xRemoteFile]CertPfx"
+			Thumbprint = "b124bf740b256316bd7439f89140d6ff6dccf658"
+			Path       = "c:\temp\wlidev.pfx"
+			Location   = "LocalMachine"
+			Store      = "WebHosting"
+			Credential = $certPass
+		}
+	}
 }
